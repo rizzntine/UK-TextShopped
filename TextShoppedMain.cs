@@ -18,6 +18,8 @@ namespace UK_TextShopped
         public const string pluginGuid = "jcg.ultrakill.textshopped";
         public const string pluginName = "Text ShoppEd";
         public const string pluginVersion = "0.1";
+        [Configgable]
+        private static ConfigToggle patchConfirmPrint = new ConfigToggle(true);
         private readonly Harmony harmony = new Harmony(pluginGuid);
         private ConfigBuilder config;
 
@@ -29,7 +31,8 @@ namespace UK_TextShopped
             Debug.Log("Plugin loaded: Text ShoppEd");
         }
 
-        public class ConfigBehaviour : MonoBehaviour
+        [HarmonyPatch(typeof(ShopZone))]
+        public static class ChangeTipMessage
         {
             [Configgable]
             private static ConfigInputField<String> normalTerminalText = new ConfigInputField<string>("Normal Terminal Text");
@@ -37,23 +40,18 @@ namespace UK_TextShopped
             private static ConfigInputField<String> testamentTerminalText = new ConfigInputField<string>("Testament Terminal Text");
             [Configgable]
             private static ConfigInputField<String> allTerminalTitle = new ConfigInputField<string>("Terminal Title");
-        }
-
-        [HarmonyPatch(typeof(ShopZone))]
-        public static class ChangeTipMessage
-        {
             [HarmonyPostfix]
             [HarmonyPatch(typeof(ShopZone), "Start")]
-            public static void ChangeTip(ShopZone __instance, ref Canvas __shopCanvas)
+            public static void ChangeTip(ShopZone __instance, ref Canvas ___shopCanvas)
             {
-                Transform tipTextTransform = __shopCanvas.transform.FindDeep("TipText");
-                Transform testamentTextTransform = __shopCanvas.transform.FindDeep("Text");
+                Transform tipTextTransform = ___shopCanvas.transform.FindDeep("TipText");
+                Transform testamentTextTransform = ___shopCanvas.transform.FindDeep("Text");
                 if (tipTextTransform != null) 
                 {
                     TMP_Text tipText = tipTextTransform.GetComponent<TMP_Text>();
                     if (tipText != null) 
                     {
-                        tipText.text = "Normal Terminal Tip";
+                        tipText.text = normalTerminalText.Value;
                     }
                 }
                 if (testamentTextTransform != null && __instance.name == "Testament Shop")
@@ -61,11 +59,12 @@ namespace UK_TextShopped
                     TMP_Text testamentText = testamentTextTransform.GetComponent<TMP_Text>();
                     if (testamentText != null)
                     {
-                        testamentText.text = "Testament Terminal Tip";
+                        testamentText.text = testamentTerminalText.Value;
                     }
                 }
-                __shopCanvas.GetComponentInChildren<TMPro.TMP_Text>(true).text = "All Terminal Title";
-                Debug.Log("TextShoppEd: Canvas Text Patched");
+                ___shopCanvas.GetComponentInChildren<TMPro.TMP_Text>(true).text = allTerminalTitle.Value;
+                if (patchConfirmPrint.Value == true)
+                    Debug.Log("TextShoppEd: Canvas Text Patched");
                 MonoSingleton<HudMessageReceiver>.Instance.SendHudMessage("TIPS PATCHED.", "", "", 1);
             }
         }
